@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Server Monitoring</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Server Monitoring Dashboard</h1>
+    
+    <div class="controls">
+        <label for="timeBuffer">Update Interval:</label>
+        <select id="timeBuffer" onchange="updateInterval()">
+            <option value="60" selected>1 Minute</option>
+            <option value="300">5 Minutes</option>
+            <option value="600">10 Minutes</option>
+        </select>
+    </div>
+
+    <div class="metrics-container">
+        <div class="metric">
+            <h3>CPU Usage</h3>
+            <p id="cpu">0%</p>
+        </div>
+
+        <div class="metric">
+            <h3>RAM Usage</h3>
+            <p id="ram-percent">0%</p>
+            <p>Total: <span id="ram-total">0</span></p>
+            <p>Used: <span id="ram-used">0</span></p>
+            <p>Available: <span id="ram-available">0</span></p>
+        </div>
+
+        <div class="metric">
+            <h3>Disk Usage</h3>
+            <p id="disk-percent">0%</p>
+            <p>Total: <span id="disk-total">0</span></p>
+            <p>Used: <span id="disk-used">0</span></p>
+            <p>Free: <span id="disk-free">0</span></p>
+        </div>
+
+        <div class="metric">
+            <h3>Open Ports</h3>
+            <p id="open-ports"></p>
+        </div>
+    </div>
+
+    <script>
+        let intervalId = null;
+        const timeOptions = { 60: 60000, 300: 300000, 600: 600000 };
+
+        function formatBytes(bytes) {
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            if (bytes === 0) return '0 B';
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${units[i]}`;
+        }
+
+        function updateMetrics(data) {
+            // Update CPU
+            document.getElementById('cpu').textContent = `${data.cpu_usage.toFixed(1)}%`;
+
+            // Update RAM
+            document.getElementById('ram-percent').textContent = `${data.ram.percent.toFixed(1)}%`;
+            document.getElementById('ram-total').textContent = formatBytes(data.ram.total);
+            document.getElementById('ram-used').textContent = formatBytes(data.ram.used);
+            document.getElementById('ram-available').textContent = formatBytes(data.ram.available);
+
+            // Update Disk
+            document.getElementById('disk-percent').textContent = `${data.disk.percent.toFixed(1)}%`;
+            document.getElementById('disk-total').textContent = formatBytes(data.disk.total);
+            document.getElementById('disk-used').textContent = formatBytes(data.disk.used);
+            document.getElementById('disk-free').textContent = formatBytes(data.disk.free);
+
+            // Update Open Ports
+            document.getElementById('open-ports').textContent = data.open_ports.join(', ');
+        }
+
+        function fetchData() {
+            fetch('/?json=1')
+                .then(response => response.json())
+                .then(updateMetrics)
+                .catch(console.error);
+        }
+
+        function updateInterval() {
+            const seconds = parseInt(document.getElementById('timeBuffer').value);
+            const interval = timeOptions[seconds];
+            
+            if (intervalId) clearInterval(intervalId);
+            intervalId = setInterval(fetchData, interval);
+            fetchData();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', updateInterval);
+    </script>
+</body>
+</html>
